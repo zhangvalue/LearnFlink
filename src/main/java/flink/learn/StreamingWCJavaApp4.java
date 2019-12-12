@@ -5,7 +5,6 @@
 package flink.learn;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -15,7 +14,7 @@ import org.apache.flink.util.Collector;
 /**
  * 使用ParameterTool工具获取端口值
  */
-public class StreamingWCJavaApp3 {
+public class StreamingWCJavaApp4 {
     public static void main(String[] args) {
         //获取参数
         int port=0;
@@ -36,17 +35,7 @@ public class StreamingWCJavaApp3 {
         //step2 :读取数据
         DataStreamSource<String> text = env.socketTextStream("localhost",port);
         //step3: transform
-        text.flatMap(new FlatMapFunction<String, WC>(){
-            @Override
-            public void flatMap(String value, Collector<WC> collector) throws Exception {
-                String[] tokens = value.toLowerCase().split(",");
-                for (String token : tokens ) {
-                    if (token.length()>0){
-                        collector.collect(new WC(token.trim(),1));
-                    }
-                }
-            }
-        }).keyBy("word")
+        text.flatMap(new MyFlatMapFunction()).keyBy("word")
                 .timeWindow(Time.seconds(5))
                 .sum("count").print().setParallelism(1);
 
@@ -58,7 +47,17 @@ public class StreamingWCJavaApp3 {
         }
 
     }
-
+    public static class MyFlatMapFunction implements  FlatMapFunction<String, WC>{
+        @Override
+        public void flatMap(String value, Collector<WC> collector) throws Exception {
+            String[] tokens = value.toLowerCase().split(",");
+            for (String token : tokens ) {
+                if (token.length()>0){
+                    collector.collect(new WC(token,1));
+                }
+            }
+        }
+    }
     public static class WC{
         /**
          * word
